@@ -1,7 +1,8 @@
-// 2020/07/30
+﻿// 2020/07/30
 // xxh3/xxHash switcher for VC++(SSE2/AVX2/AVX512) by H.Shirouzu
 
-#include "xxh3.h"
+#define XXH_INLINE_ALL
+#include "xxhash.h"
 #include "xxh3_sw.h"
 
 #ifdef XXH3_SW_MAIN
@@ -10,18 +11,31 @@
 
 int main()
 {
-	XXH3_state_t *xxh3 = XXH3_createState_sw();
+	if (XXH3_state_t *xxh3 = XXH3_createState_sw()) {
+		XXH3_128bits_reset_sw(xxh3);
 
-	XXH3_128bits_reset_sw(xxh3);
+		BYTE	data[] = "abcdef";
+		XXH3_128bits_update_sw(xxh3, data, sizeof(data));
+		auto	digest = XXH3_128bits_digest_sw(xxh3);
 
-	BYTE	data[] = "abcdef";
-	XXH3_128bits_update_sw(xxh3, data, sizeof(data));
-	auto	digest = XXH3_128bits_digest_sw(xxh3);
+		wprintf(L"xxh3(%d ...0:def 1:sse2 2:avx2 3:avx512) digest=%016llx/%016llx\n",
+				xxh_detect_feature(), digest.high64, digest.low64);
 
-	wprintf(L"xxh3(%d ...0:def 1:sse2 2:avx2 3:avx512) digest=%016llx/%016llx\n",
-		xxh_detect_feature(), digest.high64, digest.low64);
+		XXH3_freeState_sw(xxh3);
+	}
 
-	XXH3_freeState_sw(xxh3);
+	if (XXH64_state_t *xxh = XXH64_createState_sw()) {
+		XXH64_reset_sw(xxh, 0);
+
+		BYTE	data[] = "abcdef";
+		XXH64_update_sw(xxh, data, sizeof(data));
+		auto	digest = XXH64_digest_sw(xxh);
+
+		wprintf(L"xxh(%d ...0:def 1:sse2 2:avx2 3:avx512) digest=%0llx\n",
+				xxh_detect_feature(), digest);
+
+		XXH64_freeState_sw(xxh);
+	}
 }
 #endif
 
@@ -71,6 +85,10 @@ int xxh_detect_feature() {	// ref. xxh_x86dispatch.c
 		best = XXH_AVX2;
 
 	// AVX512 check
+	// 注) 2025-02-01(r3836) では AVX512 を使わないようにしていた。
+	//     （Xeon w5-3425 で性能 1% ダウン、クロック 10% ダウンしたため）
+	//     再度有効化しているので、性能が落ちる環境が見つかった場合は
+	//     ここで best = XXH_AVX2 のまま返すようにすれば AVX2 迄に戻せる。
 #define AVX512F_CPUID_MASK (1 << 16)
 #define AVX512F_XGETBV_MASK ((7 << 5) | (1 << 2) | (1 << 1))
 		if ((abcd[1] & AVX512F_CPUID_MASK) != AVX512F_CPUID_MASK) {
@@ -159,5 +177,29 @@ XXH_errorcode XXH3_128bits_update_sw(XXH3_state_t* state, const void* input, siz
 
 XXH128_hash_t XXH3_128bits_digest_sw(const XXH3_state_t* state) {
 	return pXXH3_128bits_digest(state);
+}
+
+
+// XXH
+// XXH64 は XXH_VECTOR の影響を受けないスカラー実装のみのため、ISA 別の切り替えは行わない。
+// （def/sse2/avx2/avx512 を用意しても全く同じコードになる）
+XXH64_state_t* XXH64_createState_sw(void) {
+	return XXH64_createState();
+}
+
+XXH_errorcode XXH64_reset_sw(XXH64_state_t *state, XXH64_hash_t seed) {
+	return XXH64_reset(state, seed);
+}
+
+XXH_errorcode XXH64_freeState_sw(XXH64_state_t *state) {
+	return XXH64_freeState(state);
+}
+
+XXH_errorcode XXH64_update_sw(XXH64_state_t* state, const void* input, size_t len) {
+	return XXH64_update(state, input, len);
+}
+
+XXH64_hash_t XXH64_digest_sw(const XXH64_state_t* state) {
+	return XXH64_digest(state);
 }
 

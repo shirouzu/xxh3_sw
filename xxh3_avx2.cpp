@@ -3,8 +3,7 @@
 
 #define XXH_INLINE_ALL
 #define XXH_VECTOR XXH_AVX2
-#define __AVX2__
-#include "xxh3.h"
+#include "xxhash.h"
 #include "xxh3_sw.h"
 
 // xxh3

@@ -1,4 +1,7 @@
-#ifndef XXH3_SW
+﻿#ifndef XXH3_SW
+#define XXH3_SW
+
+#include "xxhash.h"
 
 #if defined (__cplusplus)
 extern "C" {
@@ -37,6 +40,14 @@ XXH_errorcode XXH3_128bits_reset_avx512(XXH3_state_t *);
 XXH_errorcode XXH3_freeState_avx512(XXH3_state_t *);
 XXH_errorcode XXH3_128bits_update_avx512(XXH3_state_t* state, const void* input, size_t len);
 XXH128_hash_t XXH3_128bits_digest_avx512(const XXH3_state_t* state);
+
+// xxh
+// XXH64 はスカラー実装のみで XXH_VECTOR の影響を受けないため、ISA 別の切り替えは持たない
+XXH64_state_t* XXH64_createState_sw(void);
+XXH_errorcode XXH64_reset_sw(XXH64_state_t *, XXH64_hash_t);
+XXH_errorcode XXH64_freeState_sw(XXH64_state_t *);
+XXH_errorcode XXH64_update_sw(XXH64_state_t* state, const void* input, size_t len);
+XXH64_hash_t XXH64_digest_sw(const XXH64_state_t* state);
 
 #if defined (__cplusplus)
 }
